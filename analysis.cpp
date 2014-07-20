@@ -119,6 +119,7 @@ void doneWithRecord(long page, struct ThreadResources* thResources)
 		(globals->activePages);
 	it = activePages->find(page);
 	if (it == activePages->end()) {
+		cout << "ERROR - not found\n";
 		//failed
 	}
 	//write out record

@@ -20,6 +20,8 @@
 
 struct ThreadRecord *startTR = NULL;
 static char outputprefix[BUFFSZ];
+static pthread_cond_t cursesCond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t cursesLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t updateLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t barrierThreshold = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t writeProgress = PTHREAD_COND_INITIALIZER;
@@ -69,6 +71,7 @@ void* writeDataThread(void* tRes)
 	printw("Copyright, (c) Adrian McMenamin, 2014");
 	move(2,0);
 	printw("For licence details see http://github.com/mcmenaminadrian");
+	pthread_cond_signal(&cursesCond);
 	//check and update system limits
 	//getrlimit(RLIMIT_AS, &limit);
 	//move(3,0);
@@ -352,7 +355,12 @@ int startFirstThread(char* outputprefix)
 	threads->nextThread = NULL;
 	globalThreadList->threads = threads;
 	createRecordsTree(firstThreadResources);
-	pthread_create(&dataThread, NULL, writeDataThread, (void*)firstThreadResources);
+	pthread_mutex_init(&cursesLock, NULL);
+	pthread_mutex_lock(&cursesLock);
+	pthread_create(&dataThread, NULL, writeDataThread,
+		(void*)firstThreadResources);
+	pthread_cond_wait(&cursesCond, &cursesLock);
+	pthread_mutex_unlock(&cursesLock);
 	pthread_create(&threads->aPThread, NULL, startThreadHandler,
 		(void *)firstThreadResources);
 	pthread_join(threads->aPThread, NULL);
